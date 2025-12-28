@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MCP Apps Host</title>
+</head>
+<body>
+  <h1>MCP Apps Demo</h1>
+  <div id="tools"></div>
+  <div id="uiContainer"></div>
+
+  <script>
+    const serverUrl = 'http://localhost:3001';
+
+    async function loadTools() {
+      const response = await fetch(`${serverUrl}/tools`);
+      const data = await response.json();
+      const toolsDiv = document.getElementById('tools');
+      data.tools.forEach(tool => {
+        const toolDiv = document.createElement('div');
+        toolDiv.innerHTML = `<h3>${tool.name}</h3><p>${tool.description}</p>`;
+        if (tool._meta && tool._meta['ui/resourceUri']) {
+          const button = document.createElement('button');
+          button.textContent = 'Open UI';
+          button.onclick = () => loadUI(tool._meta['ui/resourceUri']);
+          toolDiv.appendChild(button);
+        } else {
+          // For tools without UI, provide text input
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.placeholder = 'Enter args as JSON';
+          const callButton = document.createElement('button');
+          callButton.textContent = 'Call Tool';
+          callButton.onclick = async () => {
+            try {
+              const args = JSON.parse(input.value);
+              const response = await fetch(`${serverUrl}/tools/${tool.name}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(args)
+              });
+              const result = await response.json();
+              alert('Result: ' + JSON.stringify(result));
+            } catch (e) {
+              alert('Error: ' + e.message);
+            }
+          };
+          toolDiv.appendChild(input);
+          toolDiv.appendChild(callButton);
+        }
+        toolsDiv.appendChild(toolDiv);
+      });
+    }
+
+    async function loadUI(uri) {
+      const uiContainer = document.getElementById('uiContainer');
+      uiContainer.innerHTML = '';
+      const iframe = document.createElement('iframe');
+      iframe.src = `${serverUrl}/ui/${uri.replace('ui://', '')}`;
+      iframe.style.width = '100%';
+      iframe.style.height = '400px';
+      iframe.sandbox = 'allow-scripts allow-same-origin allow-forms';
+      uiContainer.appendChild(iframe);
+
+      // Handle messages from iframe
+      window.addEventListener('message', async (event) => {
+        if (event.data.type === 'mcp_call_tool') {
+          if (confirm(`Allow UI to call tool ${event.data.tool}?`)) {
+            const response = await fetch(`${serverUrl}/tools/${event.data.tool}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(event.data.args)
+            });
+            const result = await response.json();
+            // Send back to iframe
+            iframe.contentWindow.postMessage({ type: 'mcp_response', result }, '*');
+          }
+        }
+      });
+    }
+
+    loadTools();
+  </script>
+</body>
+</html>

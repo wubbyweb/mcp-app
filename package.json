@@ -1,0 +1,17 @@
+{
+  "name": "mcp-app",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start:server": "node server/server.js",
+    "start:host": "node host/host.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "MCP Apps Demo Application",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
